@@ -1,3 +1,6 @@
+#include <BH1750.h>
+#include <Wire.h>
+
 #define PORCH_LIGHT 4
 #define HOUSE_LIGHT 5
 #define SWITCH_PIN 2
@@ -7,6 +10,8 @@ unsigned long presentTime;
 unsigned long startTime;
 bool lightsOn;
 int stage = 0;
+BH1750 lightMeter;
+
 void setup() {
   pinMode(PORCH_LIGHT, OUTPUT);
   pinMode(HOUSE_LIGHT, OUTPUT);
@@ -18,6 +23,8 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
   Serial.println("starting...");
+  Wire.begin();
+  lightMeter.begin();
 }
 
 void motionISR()
@@ -44,7 +51,7 @@ void house_light_switch(String flip)
 void loop() {
   
   presentTime = millis();
-  if (lightsOn)
+  if (lightsOn && lightMeter.readLightLevel() < 100)
   {
     lightsOn = false;
     porch_light_switch("ON");
