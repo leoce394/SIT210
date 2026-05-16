@@ -3,18 +3,18 @@ import asyncio
 from bleak import BleakScanner, BleakClient
 
 voiceRec = speech.Recognizer()
-DEVICE = "ArduinoNano"
+DEVICE = "Nano"
 UUID = "19B10001-EB67-592D-B9AC-A76E4D89BC63"
 running = True
 
 async def send(command):
     arduino=await BleakScanner.find_device_by_name(DEVICE)
-    if arduino is none:
+    if arduino is None:
         print("Error with finding arduino")
         return
     else:
         async with BleakClient(arduino) as client:
-            await client.write_gatt_char(COMMAND, command.encode("utf-8"), response=True)
+            await client.write_gatt_char(UUID, command.encode("utf-8"), response=True)
             print("Sent: ",command)
 
 while (running):
@@ -38,3 +38,4 @@ while (running):
         print("Could not understand audio")
     except speech.RequestError:
         print("Speech recognition  service error")
+
