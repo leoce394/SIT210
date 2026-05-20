@@ -14,6 +14,7 @@ const int BUTTON_PIN = 3;
 // -------------------- Swing thresholds --------------------
 // You will need to tune these after testing.
 const float SWING_START_GYRO_THRESHOLD = 80.0;   // deg/s
+const float SWING_END_GYRO_THRESHOLD = 25.0;  
 const float SWING_TRANSITION_THRESHOLD  = 35.0;    // deg/s
 
 const unsigned long SWING_END_THRESHOLD = 400; // ms below threshold before swing ends
@@ -149,6 +150,22 @@ void resetSwingData() {
 
   impactDetected = false;
 }
+void handleStrike()
+{
+  noInterrupts();
+  impactDetected = false;
+  interrupts();
+
+  piezoAnalogValue = analogRead(PIEZO_ANALOG_PIN);
+  realStrike = true;
+  downswingTime = millis() - swingStartTime - backswingTime;
+  finalAngle = faceAngle;
+
+  state = PROCESSING;
+
+  Serial.println("Impact detected.");
+}
+
 
 // -------------------- Setup --------------------
 void setup() {
@@ -256,32 +273,27 @@ void loop() {
   else if (state == DOWNSWING) {
     float ax, ay, az;
     float gx, gy, gz;
-
-    if (IMU.gyroscopeAvailable()) {
+    if (impactDetected)
+    {
+      handleStrike();
+    }
+    if (IMU.gyroscopeAvailable()) 
+    {
       IMU.readGyroscope(gx, gy, gz);
-      faceAngleUpdate(gx);
-      float gyroMag = getGyroMagnitude(gx, gy, gz);
-
-      if (gyroMag > peakGyro) {
-        peakGyro = gyroMag;
+      if (imapactDetected) {handleStrike();}
+      else
+      {
+        faceAngleUpdate(gx);
+        float gyroMag = getGyroMagnitude(gx, gy, gz);
+  
+        if (gyroMag > peakGyro) {
+          peakGyro = gyroMag;
+        }
+        if (gyroMag>SWING_END_GYRO_THRESHOLD) {lastMotionTime = millis();}
       }
-      if (gyroMag>SWING_START_GYRO_THRESHOLD) {lastMotionTime = millis();}
     }
 
-    if (impactDetected) {
-      noInterrupts();
-      impactDetected = false;
-      interrupts();
-
-      piezoAnalogValue = analogRead(PIEZO_ANALOG_PIN);
-      realStrike = true;
-      downswingTime = millis() - swingStartTime - backswingTime;
-      finalAngle = faceAngle;
-
-      state = PROCESSING;
-
-      Serial.println("Impact detected.");
-    }
+    
 
     else if (millis()-lastMotionTime>SWING_END_THRESHOLD) 
     {
