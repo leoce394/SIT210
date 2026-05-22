@@ -6,34 +6,24 @@ char ssid[] = "test";
 char pass[] = "password";
 WiFiServer server(80);
 // -------------------- Pin setup --------------------
-const int PIEZO_DIGITAL_PIN = 2;
 const int PIEZO_ANALOG_PIN  = A7;
-
 const int RGB_RED_PIN   = 5;
 const int RGB_GREEN_PIN = 6;
 const int RGB_BLUE_PIN  = 9;
-
 const int BUTTON_PIN = 3;
-
-
-// -------------------- Swing thresholds --------------------
+// -------------------- Gyroscope thresholds --------------------
 // You will need to tune these after testing.
-const float SWING_START_GYRO_THRESHOLD = 80.0;   // deg/s
+const float SWING_START_GYRO_THRESHOLD = 80.0; 
 const float SWING_END_GYRO_THRESHOLD = 15.0;  
-const float SWING_TRANSITION_THRESHOLD  = 35.0;    // deg/s
-
-const unsigned long SWING_END_THRESHOLD = 400; // ms below threshold before swing ends
-
+const float SWING_TRANSITION_THRESHOLD  = 35.0; 
+const unsigned long SWING_END_THRESHOLD = 400;
 
 // -------------------- Interrupt flags --------------------
 volatile bool buttonPressed = false;
 volatile bool impactDetected = false;
 unsigned long buttonWait = 0;
-
 volatile unsigned long impactTimeMicros = 0;
-
-
-// -------------------- State machine --------------------
+// -------------------- System states --------------------
 enum SystemState {
   SETUP_STATE,
   WIFI_SETUP,
@@ -44,8 +34,6 @@ enum SystemState {
   PROCESSING,
   ERROR_STATE
 };
-
-
 volatile SystemState state = SETUP_STATE;
 // -------------------- Clubface State --------------------
 float faceAngle = 0;
@@ -79,7 +67,7 @@ float peakAccel = 0.0;
 const int pizeoThreshold = 200;
 int piezoAnalogValue = 0;
 
-// -------------------- Interrupt service routines --------------------
+// -------------------- ISRs --------------------
 void buttonISR() {
   buttonPressed = true;
 
@@ -101,36 +89,6 @@ void setRGB(bool redOn, bool greenOn, bool blueOn)
     digitalWrite(RGB_BLUE_PIN,  blueOn  ? HIGH : LOW);
   }
 
-void setLedIdle() {
-  // Orange = red + green
-  setRGB(true, true, false);
-}
-
-void setLedArmed() {
-  setRGB(false, true, false);
-}
-
-void setLedRecording() {
-  setRGB(false, false, true);
-}
-
-void setLedProcessing() {
-  // Purple = red + blue
-  setRGB(true, false, true);
-}
-
-void setLedError() {
-  setRGB(true, false, false);
-}
-
-void setLedSuccess() {
-  // White = red + green + blue
-  setRGB(true, true, true);
-}
-void setLedDownswing() {
-  // White = red + green + blue
-  setRGB(true, true, false);
-}
 
 // -------------------- Sensor helpers --------------------
 float getGyroMagnitude(float gx, float gy, float gz) {
@@ -262,7 +220,7 @@ void setup() {
   pinMode(PIEZO_DIGITAL_PIN, INPUT);
   pinMode(PIEZO_ANALOG_PIN, INPUT);
 
-  setLedError();
+  setRGB(true, false, false);
 
   Serial.println("Starting smart golf swing analyser prototype...");
 
@@ -270,7 +228,7 @@ void setup() {
     Serial.println("Failed to initialize IMU!");
     state = ERROR_STATE;
     while (1) {
-      setLedError();
+      setRGB(true, false, false);
     }
   }
   Serial.println("IMU initialized successfully.");
@@ -283,7 +241,7 @@ void setup() {
     delay(2000);
     state = ERROR_STATE;
     
-    setLedError();
+    setRGB(true, false, false);
     
     Serial.print(".");
   }
@@ -306,7 +264,7 @@ void setup() {
   //attachInterrupt(digitalPinToInterrupt(PIEZO_DIGITAL_PIN), impactISR, RISING);
 
   state = STANDBY;
-  setLedIdle();
+  setRGB(true, true, false);
 
   Serial.println("System ready. Press button to arm.");
 }
@@ -315,7 +273,7 @@ void setup() {
 void loop() {
   if (state == STANDBY || state == PROCESSING) {handleWebClient();}
   if (state == STANDBY) {
-    setLedIdle();
+    setRGB(true, true, false);
 
     if (buttonPressed && millis()>buttonWait) 
     {
@@ -323,7 +281,7 @@ void loop() {
       resetSwingData();
       previousAngleTime = micros();
       state = ARMED;
-      setLedArmed();
+      setRGB(false, true, false);
 
       Serial.println();
       Serial.println("System armed. Waiting for swing...");
@@ -343,7 +301,7 @@ void loop() {
         peakGyro = gyroMag;
 
         state = BACKSWING;
-        setLedRecording();
+        setRGB(false, false, true);
 
         Serial.println("Swing started.");
       }
@@ -351,7 +309,6 @@ void loop() {
   }
 
   else if (state == BACKSWING) {
-    float ax, ay, az;
     float gx, gy, gz;
 
     if (IMU.gyroscopeAvailable()) {
@@ -362,14 +319,13 @@ void loop() {
       if (gyroMag < SWING_TRANSITION_THRESHOLD) {
         backswingTime = millis() - swingStartTime;
         state = DOWNSWING;
-        setLedDownswing();
+        setRGB(true, true, false);
         lastMotionTime = millis();
       }
     }
   }
 
   else if (state == DOWNSWING) {
-    float ax, ay, az;
     float gx, gy, gz;
     impactUpdate();
     if (impactDetected)
@@ -392,17 +348,12 @@ void loop() {
         if (gyroMag>SWING_END_GYRO_THRESHOLD) {lastMotionTime = millis();}
       }
     }
-
-    
-
     else if (millis()-lastMotionTime>SWING_END_THRESHOLD) 
     {
       realStrike = false;
       swingEndTime = millis();
       state = PROCESSING; 
-    }
-
-    
+    }   
   }
 
   else if (state == PROCESSING) {
@@ -458,16 +409,16 @@ void loop() {
     Serial.println("------------------------");
     Serial.println();
 
-    setLedSuccess();
+    setRGB(true, true, true);
     delay(500);
 
     state = STANDBY;
-    setLedIdle();
+    setRGB(true, true, false);
 
     Serial.println("System ready. Press button to arm.");
   }
 
   else if (state == ERROR_STATE) {
-    setLedError();
+    setRGB(true, false, false);
   }
 }
