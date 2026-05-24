@@ -95,10 +95,6 @@ float getGyroMagnitude(float gx, float gy, float gz) {
   return sqrt(gx * gx + gy * gy + gz * gz);
 }
 
-float getAccelMagnitude(float ax, float ay, float az) {
-  return sqrt(ax * ax + ay * ay + az * az);
-}
-
 void faceAngleUpdate(float gx)
 {
   unsigned long currentTime = micros();
@@ -148,10 +144,12 @@ void handleWebClient() {
   if (!client) {
     return;
   }
-
+  unsigned long startTime = millis();
   // Wait for browser request
-  while (client.connected()) {
-    if (client.available()) {
+  while (client.connected()) 
+  {
+    if (client.available()) 
+    {
       String request = client.readStringUntil('\r');
       client.flush();
 
@@ -165,37 +163,78 @@ void handleWebClient() {
       client.println("<head>");
       client.println("<meta name='viewport' content='width=device-width, initial-scale=1'>");
       client.println("<meta http-equiv='refresh' content='2'>");
+
       client.println("<style>");
-      client.println("body{font-family:Arial;background:#111;color:#eee;padding:20px;}");
-      client.println(".card{background:#222;border-radius:12px;padding:18px;margin:12px 0;}");
-      client.println(".value{font-size:28px;font-weight:bold;color:#7CFC00;}");
-      client.println(".label{color:#aaa;font-size:14px;}");
+      client.println("body{font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;color:#111;margin:0;padding:18px;}");
+      client.println("h1{font-size:28px;margin:0 0 6px 0;color:#111;}");
+      client.println(".subtitle{font-size:14px;color:#555;margin-bottom:18px;}");
+      client.println(".status{background:#ffffff;border-left:6px solid #2e7d32;border-radius:12px;padding:14px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,0.12);}");
+      client.println(".statusLabel{font-size:13px;color:#555;text-transform:uppercase;letter-spacing:0.05em;}");
+      client.println(".statusValue{font-size:26px;font-weight:bold;margin-top:4px;color:#2e7d32;}");
+      client.println(".grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}");
+      client.println(".card{background:#ffffff;border-radius:14px;padding:16px;min-height:95px;box-shadow:0 2px 8px rgba(0,0,0,0.12);border:1px solid #dde3ea;}");
+      client.println(".label{font-size:13px;color:#555;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em;}");
+      client.println(".value{font-size:24px;font-weight:bold;color:#111;line-height:1.1;}");
+      client.println(".unit{font-size:15px;color:#666;font-weight:normal;}");
+      client.println(".footer{font-size:12px;color:#666;margin-top:18px;text-align:center;}");
+      client.println("@media(max-width:520px){.grid{grid-template-columns:1fr;}h1{font-size:24px}.value{font-size:22px;}}");
       client.println("</style>");
+
       client.println("</head>");
-
       client.println("<body>");
+
       client.println("<h1>Smart Golf Swing Analyser</h1>");
+      client.println("<div class='subtitle'>Latest swing result</div>");
 
-      client.println("<div class='card'><div class='label'>Swing Type</div><div class='value'>" + latestSwingType + "</div></div>");
+      client.println("<div class='status'>");
+      client.println("<div class='statusLabel'>Swing Type</div>");
+      client.println("<div class='statusValue'>" + latestSwingType + "</div>");
+      client.println("</div>");
 
-      client.println("<div class='card'><div class='label'>Estimated 7 Iron Swing Speed</div><div class='value'>" + String(latestSwingSpeedKmh, 1) + " km/h</div></div>");
+      client.println("<div class='grid'>");
 
-      client.println("<div class='card'><div class='label'>Backswing Time</div><div class='value'>" + String(latestBackswingTime) + " ms</div></div>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Swing Speed</div>");
+      client.println("<div class='value'>" + String(latestSwingSpeedKmh, 1) + " <span class='unit'>km/h</span></div>");
+      client.println("</div>");
 
-      client.println("<div class='card'><div class='label'>Total Swing Time</div><div class='value'>" + String(latestTotalSwingTime) + " ms</div></div>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Backswing Time</div>");
+      client.println("<div class='value'>" + String(latestBackswingTime) + " <span class='unit'>ms</span></div>");
+      client.println("</div>");
 
-      client.println("<div class='card'><div class='label'>Tempo</div><div class='value'>" + latestTempo + "</div></div>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Total Swing Time</div>");
+      client.println("<div class='value'>" + String(latestTotalSwingTime) + " <span class='unit'>ms</span></div>");
+      client.println("</div>");
 
-      client.println("<div class='card'><div class='label'>Face Angle / Rotation</div><div class='value'>" + latestFaceAngle + "</div></div>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Tempo</div>");
+      client.println("<div class='value'>" + latestTempo + "</div>");
+      client.println("</div>");
 
-      client.println("<div class='card'><div class='label'>Piezo Value</div><div class='value'>" + latestPiezo + "</div></div>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Face Rotation</div>");
+      client.println("<div class='value'>" + latestFaceAngle + "</div>");
+      client.println("</div>");
 
-      client.println("<p>Page refreshes every 2 seconds.</p>");
+      client.println("<div class='card'>");
+      client.println("<div class='label'>Piezo / Strike</div>");
+      client.println("<div class='value'>" + latestPiezo + "</div>");
+      client.println("</div>");
+
+      client.println("</div>");
+
+      client.println("<div class='footer'>Page refreshes every 2 seconds</div>");
 
       client.println("</body>");
       client.println("</html>");
 
       break;
+    }
+    else 
+    {
+      if (millis()-startTime>1000) {client.stop(); return;}
     }
   }
 
@@ -346,7 +385,7 @@ void loop() {
         if (gyroMag>SWING_END_GYRO_THRESHOLD) {lastMotionTime = millis();}
       }
     }
-    else if (millis()-lastMotionTime>SWING_END_THRESHOLD) 
+    if (millis()-lastMotionTime>SWING_END_THRESHOLD) 
     {
       realStrike = false;
       swingEndTime = millis();
@@ -359,8 +398,6 @@ void loop() {
 
     unsigned long totalSwingTime = swingEndTime - swingStartTime;
     buttonWait = millis()+4000;
-    Serial.println();
-    Serial.println("----- Swing Result -----");
 
     if (realStrike)
     {
@@ -369,15 +406,6 @@ void loop() {
       latestSwingType = "Real strike";
       latestFaceAngle = String(finalAngle,1)+" degrees";
       latestPiezo = String(piezoAnalogValue);
-      Serial.println("Swing type: Real strike");
-      Serial.print("Swing Tempo: Backswing/Downswing");
-      Serial.print(tempoRatio, 1);
-      Serial.println(":1");
-      Serial.print("change in clubface (+closed), (-open)");
-      Serial.print(finalAngle);
-      Serial.println(" degrees");
-      Serial.print("Piezo analog value: ");
-      Serial.println(piezoAnalogValue);
     } 
     else 
     {
@@ -385,35 +413,20 @@ void loop() {
       latestTempo = "N/A";
       latestFaceAngle = "N/A";
       latestPiezo = "No impact detected";
-      Serial.println("Swing type: Practice swing");
-      Serial.print("Total swing time: ");
-      Serial.print(totalSwingTime);
-      Serial.println(" ms");
-      Serial.print("Backswing Time: ");
-      Serial.print(backswingTime);
-      Serial.println(" ms");
     }
 
 
-    Serial.print("Estimated 7 iron Swing Speed ");
+    
     float kmh = (peakGyro*3.14/180)*1.33*3.6;
     latestSwingSpeedKmh = kmh;
     latestBackswingTime = backswingTime;
     latestTotalSwingTime = totalSwingTime;
-    Serial.print(kmh);
-    Serial.println(" km/h");
-
-
-    Serial.println("------------------------");
-    Serial.println();
 
     setRGB(true, true, true);
     delay(500);
 
     state = STANDBY;
     setRGB(true, true, false);
-
-    Serial.println("System ready. Press button to arm.");
   }
 
   else if (state == ERROR_STATE) {
