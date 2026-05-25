@@ -5,25 +5,23 @@
 char ssid[] = "test";
 char pass[] = "password";
 WiFiServer server(80);
-// -------------------- Pin setup --------------------
+// Pins
 const int PIEZO_ANALOG_PIN  = A7;
 const int RGB_RED_PIN   = 5;
 const int RGB_GREEN_PIN = 6;
 const int RGB_BLUE_PIN  = 9;
 const int BUTTON_PIN = 3;
-// -------------------- Gyroscope thresholds --------------------
-// You will need to tune these after testing.
+// Gyro magnitude thresholds
 const float SWING_START_GYRO_THRESHOLD = 80.0; 
 const float SWING_END_GYRO_THRESHOLD = 15.0;  
 const float SWING_TRANSITION_THRESHOLD  = 35.0; 
 const unsigned long SWING_END_THRESHOLD = 400;
 
-// -------------------- Interrupt flags --------------------
+// Interrupt fields
 volatile bool buttonPressed = false;
-volatile bool impactDetected = false;
 unsigned long buttonWait = 0;
 volatile unsigned long impactTimeMicros = 0;
-// -------------------- System states --------------------
+// State machine
 enum SystemState {
   SETUP_STATE,
   WIFI_SETUP,
@@ -35,16 +33,11 @@ enum SystemState {
   ERROR_STATE
 };
 volatile SystemState state = SETUP_STATE;
-// -------------------- Clubface State --------------------
+// Clubface angle metrics
 float faceAngle = 0;
 float finalAngle = 0;
 unsigned long previousAngleTime = 0;
-//enum ClubfaceState {
-//  SQUARE,
-//  OPEN,
-//  CLOSED
-//};
-// -------------------- Swing data --------------------
+// Swing data fields
 String latestSwingType = "No swing yet";
 String latestTempo = "N/A";
 String latestFaceAngle = "N/A";
@@ -67,21 +60,12 @@ float peakAccel = 0.0;
 const int pizeoThreshold = 200;
 int piezoAnalogValue = 0;
 
-// -------------------- ISRs --------------------
-void buttonISR() {
+// -------------------- ISR --------------------
+void buttonISR() 
+{
   buttonPressed = true;
-
 }
-
-//void impactISR() {
-//  if (state == DOWNSWING)
-//  {
-//    impactDetected = true;
-//    impactTimeMicros = micros();
-//  }
-//}
-
-// -------------------- LED helper --------------------
+// RGB LED setter
 void setRGB(bool redOn, bool greenOn, bool blueOn)
   {
     digitalWrite(RGB_RED_PIN,   redOn   ? HIGH : LOW);
@@ -90,8 +74,9 @@ void setRGB(bool redOn, bool greenOn, bool blueOn)
   }
 
 
-// -------------------- Sensor helpers --------------------
-float getGyroMagnitude(float gx, float gy, float gz) {
+// Calculation and update methods
+float getGyroMagnitude(float gx, float gy, float gz) 
+{
   return sqrt(gx * gx + gy * gy + gz * gz);
 }
 
@@ -242,10 +227,7 @@ void setup() {
   pinMode(RGB_RED_PIN, OUTPUT);
   pinMode(RGB_GREEN_PIN, OUTPUT);
   pinMode(RGB_BLUE_PIN, OUTPUT);
-
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  //pinMode(PIEZO_DIGITAL_PIN, INPUT);
   pinMode(PIEZO_ANALOG_PIN, INPUT);
 
   setRGB(true, false, false);
@@ -286,23 +268,19 @@ void setup() {
   Serial.println(" Hz");
 
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, FALLING);
-
-  // Depending on your piezo module, this may need to be RISING or FALLING.
-  // If impact never triggers, try changing RISING to FALLING.
-  //attachInterrupt(digitalPinToInterrupt(PIEZO_DIGITAL_PIN), impactISR, RISING);
-
+  
   state = STANDBY;
   setRGB(true, true, false);
 
   Serial.println("System ready. Press button to arm.");
 }
 
-// -------------------- Main loop --------------------
+// Main logic via State Machine
 void loop() {
   if (state == STANDBY || state == PROCESSING) {handleWebClient();}
-  if (state == STANDBY) {
+  if (state == STANDBY) 
+  {
     setRGB(true, true, false);
-
     if (buttonPressed && millis()>buttonWait) 
     {
       buttonPressed = false;
@@ -326,7 +304,6 @@ void loop() {
 
       if (gyroMag > SWING_START_GYRO_THRESHOLD) {
         swingStartTime = millis();
-        peakGyro = gyroMag;
         previousAngleTime = micros();
 
         state = BACKSWING;
@@ -380,7 +357,7 @@ void loop() {
     if (millis()-lastMotionTime>SWING_END_THRESHOLD) 
     {
       realStrike = false;
-      swingEndTime = millis();
+      swingEndTime = millis()-SWING_END_THRESHOLD;
       state = PROCESSING; 
     }   
   }
