@@ -144,97 +144,89 @@ void handleWebClient() {
   if (!client) {
     return;
   }
+
   unsigned long startTime = millis();
-  // Wait for browser request
-  while (client.connected()) 
-  {
-    if (client.available()) 
-    {
+
+  while (client.connected()) {
+    if (client.available()) {
       String request = client.readStringUntil('\r');
       client.flush();
 
-      client.println("HTTP/1.1 200 OK");
-      client.println("Content-Type: text/html");
-      client.println("Connection: close");
+      client.println(F("HTTP/1.1 200 OK"));
+      client.println(F("Content-Type: text/html"));
+      client.println(F("Connection: close"));
+      client.println(F("Cache-Control: no-store"));
       client.println();
 
-      client.println("<!DOCTYPE html>");
-      client.println("<html>");
-      client.println("<head>");
-      client.println("<meta name='viewport' content='width=device-width, initial-scale=1'>");
-      client.println("<meta http-equiv='refresh' content='2'>");
+      client.println(F("<!DOCTYPE html>"));
+      client.println(F("<html>"));
+      client.println(F("<head>"));
+      client.println(F("<meta name='viewport' content='width=device-width, initial-scale=1'>"));
+      client.println(F("<meta http-equiv='refresh' content='2'>"));
 
-      client.println("<style>");
-      client.println("body{font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;color:#111;margin:0;padding:18px;}");
-      client.println("h1{font-size:28px;margin:0 0 6px 0;color:#111;}");
-      client.println(".subtitle{font-size:14px;color:#555;margin-bottom:18px;}");
-      client.println(".status{background:#ffffff;border-left:6px solid #2e7d32;border-radius:12px;padding:14px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,0.12);}");
-      client.println(".statusLabel{font-size:13px;color:#555;text-transform:uppercase;letter-spacing:0.05em;}");
-      client.println(".statusValue{font-size:26px;font-weight:bold;margin-top:4px;color:#2e7d32;}");
-      client.println(".grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}");
-      client.println(".card{background:#ffffff;border-radius:14px;padding:16px;min-height:95px;box-shadow:0 2px 8px rgba(0,0,0,0.12);border:1px solid #dde3ea;}");
-      client.println(".label{font-size:13px;color:#555;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em;}");
-      client.println(".value{font-size:24px;font-weight:bold;color:#111;line-height:1.1;}");
-      client.println(".unit{font-size:15px;color:#666;font-weight:normal;}");
-      client.println(".footer{font-size:12px;color:#666;margin-top:18px;text-align:center;}");
-      client.println("@media(max-width:520px){.grid{grid-template-columns:1fr;}h1{font-size:24px}.value{font-size:22px;}}");
-      client.println("</style>");
+      client.println(F("<style>"));
+      client.println(F("body{font-family:Arial;background:#f6f8fa;color:#111;margin:0;padding:16px;}"));
+      client.println(F("h1{font-size:26px;margin:0 0 4px 0;}"));
+      client.println(F(".sub{font-size:14px;color:#555;margin-bottom:14px;}"));
+      client.println(F(".status{background:#fff;border-left:6px solid #2e7d32;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid #ddd;}"));
+      client.println(F(".grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}"));
+      client.println(F(".card{background:#fff;border-radius:10px;padding:14px;border:1px solid #ddd;}"));
+      client.println(F(".label{font-size:13px;color:#555;margin-bottom:8px;}"));
+      client.println(F(".value{font-size:22px;font-weight:bold;color:#111;}"));
+      client.println(F(".footer{font-size:12px;color:#666;text-align:center;margin-top:14px;}"));
+      client.println(F("@media(max-width:520px){.grid{grid-template-columns:1fr;}.value{font-size:21px;}}"));
+      client.println(F("</style>"));
 
-      client.println("</head>");
-      client.println("<body>");
+      client.println(F("</head>"));
+      client.println(F("<body>"));
 
-      client.println("<h1>Smart Golf Swing Analyser</h1>");
-      client.println("<div class='subtitle'>Latest swing result</div>");
+      client.println(F("<h1>Smart Golf Swing Analyser</h1>"));
+      client.println(F("<div class='sub'>Latest swing result</div>"));
 
-      client.println("<div class='status'>");
-      client.println("<div class='statusLabel'>Swing Type</div>");
-      client.println("<div class='statusValue'>" + latestSwingType + "</div>");
-      client.println("</div>");
+      client.println(F("<div class='status'>"));
+      client.println(F("<div class='label'>Swing Type</div>"));
+      client.println("<div class='value'>" + latestSwingType + "</div>");
+      client.println(F("</div>"));
 
-      client.println("<div class='grid'>");
+      client.println(F("<div class='grid'>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Swing Speed</div>");
-      client.println("<div class='value'>" + String(latestSwingSpeedKmh, 1) + " <span class='unit'>km/h</span></div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Swing Speed</div><div class='value'>"));
+      client.print(String(latestSwingSpeedKmh, 1));
+      client.println(F(" km/h</div></div>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Backswing Time</div>");
-      client.println("<div class='value'>" + String(latestBackswingTime) + " <span class='unit'>ms</span></div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Backswing Time</div><div class='value'>"));
+      client.print(String(latestBackswingTime));
+      client.println(F(" ms</div></div>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Total Swing Time</div>");
-      client.println("<div class='value'>" + String(latestTotalSwingTime) + " <span class='unit'>ms</span></div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Total Swing Time</div><div class='value'>"));
+      client.print(String(latestTotalSwingTime));
+      client.println(F(" ms</div></div>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Tempo</div>");
-      client.println("<div class='value'>" + latestTempo + "</div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Tempo</div><div class='value'>"));
+      client.print(latestTempo);
+      client.println(F("</div></div>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Face Rotation</div>");
-      client.println("<div class='value'>" + latestFaceAngle + "</div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Face Rotation</div><div class='value'>"));
+      client.print(latestFaceAngle);
+      client.println(F("</div></div>"));
 
-      client.println("<div class='card'>");
-      client.println("<div class='label'>Piezo / Strike</div>");
-      client.println("<div class='value'>" + latestPiezo + "</div>");
-      client.println("</div>");
+      client.println(F("<div class='card'><div class='label'>Piezo / Strike</div><div class='value'>"));
+      client.print(latestPiezo);
+      client.println(F("</div></div>"));
 
-      client.println("</div>");
+      client.println(F("</div>"));
 
-      client.println("<div class='footer'>Page refreshes every 2 seconds</div>");
+      client.println(F("<div class='footer'>Page refreshes every 2 seconds</div>"));
 
-      client.println("</body>");
-      client.println("</html>");
+      client.println(F("</body>"));
+      client.println(F("</html>"));
 
       break;
     }
-    else 
-    {
-      if (millis()-startTime>1000) {client.stop(); return;}
+
+    if (millis() - startTime > 1000) {
+      client.stop();
+      return;
     }
   }
 
