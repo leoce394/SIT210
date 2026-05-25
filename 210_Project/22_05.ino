@@ -60,7 +60,7 @@ float peakAccel = 0.0;
 const int pizeoThreshold = 200;
 int piezoAnalogValue = 0;
 
-// -------------------- ISR --------------------
+//ISR
 void buttonISR() 
 {
   buttonPressed = true;
