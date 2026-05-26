@@ -124,6 +124,33 @@ void handleStrike()
   state = PROCESSING;
   Serial.println("Impact detected.");
 }
+void checkWiFi()
+{
+  static unsigned long lastCheck=0;
+  if (millis()-lastCheck<10000) {return;}
+  lastCheck = millis();
+  if (WiFi.status() != WL_CONNECTED) {reconnectWiFi();}
+}
+void reconnectWiFi()
+{
+  WiFi.end();
+  delay(250);
+  int status = WL_IDLE_STATUS;
+  while (status!=WL_CONNECTED)
+  {
+    status = WiFi.begin(ssid,pass);
+    delay(2000);
+    state = ERROR_STATE;
+    
+    setRGB(true, false, false);
+    
+    Serial.print(".");
+  }
+  server.begin();
+  setRGB(true,true,false);
+  state = STANDBY;
+}
+
 void handleWebpage() {
   WiFiClient client = server.available();
 
@@ -282,6 +309,7 @@ void setup() {
 void loop() {
   if (state == STANDBY) 
   {
+    checkWiFi();
     setRGB(true, true, false);
     handleWebpage();
     if (buttonPressed && millis()>buttonWait) 
