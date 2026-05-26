@@ -123,7 +123,7 @@ void handleStrike()
   state = PROCESSING;
   Serial.println("Impact detected.");
 }
-void handleWebClient() {
+void handleWebpage() {
   WiFiClient client = server.available();
 
   if (!client) {
@@ -277,7 +277,7 @@ void setup() {
 
 // Main logic via State Machine
 void loop() {
-  if (state == STANDBY || state == PROCESSING) {handleWebClient();}
+  if (state == STANDBY || state == PROCESSING) {handleWebpage();}
   if (state == STANDBY) 
   {
     setRGB(true, true, false);
@@ -342,6 +342,7 @@ void loop() {
     if (IMU.gyroscopeAvailable()) 
     {
       IMU.readGyroscope(gx, gy, gz);
+      impactUpdate();
       if (impactDetected) {handleStrike(); return;}
       else
       {
@@ -373,7 +374,8 @@ void loop() {
       float tempoRatio = (float)backswingTime / (float)downswingTime;
       latestTempo = String(tempoRatio,1)+":1";
       latestSwingType = "Real strike";
-      latestFaceAngle = String(finalAngle,1)+" degrees";
+      if (finalAngle>0){latestFaceAngle = String(finalAngle,1)+" degrees CLOSED";}
+      else {latestFaceAngle = String(abs(finalAngle),1)+" degrees OPEN";}
       latestPiezo = String(piezoAnalogValue);
     } 
     else 
@@ -383,9 +385,6 @@ void loop() {
       latestFaceAngle = "N/A";
       latestPiezo = "No impact detected";
     }
-
-
-    
     float kmh = (peakGyro*3.14/180)*1.33*3.6;
     latestSwingSpeedKmh = kmh;
     latestBackswingTime = backswingTime;
