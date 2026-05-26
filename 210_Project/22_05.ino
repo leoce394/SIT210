@@ -148,7 +148,7 @@ void handleWebpage() {
       client.println(F("<html>"));
       client.println(F("<head>"));
       client.println(F("<meta name='viewport' content='width=device-width, initial-scale=1'>"));
-      client.println(F("<meta http-equiv='refresh' content='2'>"));
+      client.println(F("<meta http-equiv='refresh' content='5'>"));
 
       client.println(F("<style>"));
       client.println(F("body{font-family:Arial;background:#f6f8fa;color:#111;margin:0;padding:16px;}"));
@@ -204,7 +204,7 @@ void handleWebpage() {
 
       client.println(F("</div>"));
 
-      client.println(F("<div class='footer'>Page refreshes every 2 seconds</div>"));
+      client.println(F("<div class='footer'>Page refreshes every 5 seconds</div>"));
 
       client.println(F("</body>"));
       client.println(F("</html>"));
