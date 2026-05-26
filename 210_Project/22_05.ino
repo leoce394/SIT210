@@ -19,6 +19,7 @@ const unsigned long SWING_END_THRESHOLD = 400;
 
 // Interrupt fields
 volatile bool buttonPressed = false;
+volatile bool impactDetected = false;
 unsigned long buttonWait = 0;
 volatile unsigned long impactTimeMicros = 0;
 // State machine
@@ -41,7 +42,7 @@ unsigned long previousAngleTime = 0;
 String latestSwingType = "No swing yet";
 String latestTempo = "N/A";
 String latestFaceAngle = "N/A";
-String latestPiezo = "N/A";
+String latestHarshness = "N/A";
 unsigned long latestTotalSwingTime = 0;
 unsigned long latestBackswingTime = 0;
 float latestSwingSpeedKmh = 0.0;
@@ -170,7 +171,9 @@ void handleWebpage() {
 
       client.println(F("<div class='status'>"));
       client.println(F("<div class='label'>Swing Type</div>"));
-      client.println("<div class='value'>" + latestSwingType + "</div>");
+      client.print(F("<div class='value'>"));
+      client.print(latestSwingType);
+      client.println(F("</div>"));
       client.println(F("</div>"));
 
       client.println(F("<div class='grid'>"));
@@ -195,8 +198,8 @@ void handleWebpage() {
       client.print(latestFaceAngle);
       client.println(F("</div></div>"));
 
-      client.println(F("<div class='card'><div class='label'>Piezo / Strike</div><div class='value'>"));
-      client.print(latestPiezo);
+      client.println(F("<div class='card'><div class='label'>Harshness Factor</div><div class='value'>"));
+      client.print(latestHarshness);
       client.println(F("</div></div>"));
 
       client.println(F("</div>"));
@@ -277,10 +280,10 @@ void setup() {
 
 // Main logic via State Machine
 void loop() {
-  if (state == STANDBY || state == PROCESSING) {handleWebpage();}
   if (state == STANDBY) 
   {
     setRGB(true, true, false);
+    handleWebpage();
     if (buttonPressed && millis()>buttonWait) 
     {
       buttonPressed = false;
@@ -368,6 +371,7 @@ void loop() {
 
     unsigned long totalSwingTime = swingEndTime - swingStartTime;
     buttonWait = millis()+4000;
+    float kmh = (peakGyro*3.14/180)*1.33*3.6;
 
     if (realStrike)
     {
@@ -376,16 +380,15 @@ void loop() {
       latestSwingType = "Real strike";
       if (finalAngle>0){latestFaceAngle = String(finalAngle,1)+" degrees CLOSED";}
       else {latestFaceAngle = String(abs(finalAngle),1)+" degrees OPEN";}
-      latestPiezo = String(piezoAnalogValue);
+      latestHarshness = String(map(piezoAnalogValue,0,1023,0,100)/kmh);
     } 
     else 
     {
       latestSwingType = "Practice swing";
       latestTempo = "N/A";
       latestFaceAngle = "N/A";
-      latestPiezo = "No impact detected";
+      latestHarshness = "No impact detected";
     }
-    float kmh = (peakGyro*3.14/180)*1.33*3.6;
     latestSwingSpeedKmh = kmh;
     latestBackswingTime = backswingTime;
     latestTotalSwingTime = totalSwingTime;
