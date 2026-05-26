@@ -225,7 +225,7 @@ void handleWebpage() {
       client.print(latestFaceAngle);
       client.println(F("</div></div>"));
 
-      client.println(F("<div class='card'><div class='label'>Harshness Factor</div><div class='value'>"));
+      client.println(F("<div class='card'><div class='label'>Strike Factor (1.0 is ideal)</div><div class='value'>"));
       client.print(latestHarshness);
       client.println(F("</div></div>"));
 
