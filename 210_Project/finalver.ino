@@ -1,10 +1,12 @@
 #include <Arduino_LSM6DSOX.h>
 #include <WiFiNINA.h>
-
+#include <PubSubClient.h>
 
 char ssid[] = "test";
 char pass[] = "password";
-WiFiServer server(80);
+const char* piServer = "192.168.1.194";
+WiFiClient client;
+PubSubClient mqttClient(client);
 // Pins
 const int PIEZO_ANALOG_PIN  = A7;
 const int RGB_RED_PIN   = 5;
@@ -45,7 +47,7 @@ String latestFaceAngle = "N/A";
 String latestHarshness = "N/A";
 unsigned long latestTotalSwingTime = 0;
 unsigned long latestBackswingTime = 0;
-float latestSwingSpeedKmh = 0.0;
+float latestSwingSpeed = 0.0;
 unsigned long swingStartTime = 0;
 unsigned long backswingTime = 0;
 unsigned long downswingTime = 0;
@@ -150,103 +152,31 @@ void reconnectWiFi()
   setRGB(true,true,false);
   state = STANDBY;
 }
-
-void handleWebpage() {
-  WiFiClient client = server.available();
-
-  if (!client) {
-    return;
-  }
-
-  unsigned long startTime = millis();
-
-  while (client.connected()) {
-    if (client.available()) {
-      String request = client.readStringUntil('\r');
-      client.flush();
-
-      client.println(F("HTTP/1.1 200 OK"));
-      client.println(F("Content-Type: text/html"));
-      client.println(F("Connection: close"));
-      client.println(F("Cache-Control: no-store"));
-      client.println();
-
-      client.println(F("<!DOCTYPE html>"));
-      client.println(F("<html>"));
-      client.println(F("<head>"));
-      client.println(F("<meta name='viewport' content='width=device-width, initial-scale=1'>"));
-      client.println(F("<meta http-equiv='refresh' content='5'>"));
-
-      client.println(F("<style>"));
-      client.println(F("body{font-family:Arial;background:#f6f8fa;color:#111;margin:0;padding:16px;}"));
-      client.println(F("h1{font-size:26px;margin:0 0 4px 0;}"));
-      client.println(F(".sub{font-size:14px;color:#555;margin-bottom:14px;}"));
-      client.println(F(".status{background:#fff;border-left:6px solid #2e7d32;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid #ddd;}"));
-      client.println(F(".grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}"));
-      client.println(F(".card{background:#fff;border-radius:10px;padding:14px;border:1px solid #ddd;}"));
-      client.println(F(".label{font-size:13px;color:#555;margin-bottom:8px;}"));
-      client.println(F(".value{font-size:22px;font-weight:bold;color:#111;}"));
-      client.println(F(".footer{font-size:12px;color:#666;text-align:center;margin-top:14px;}"));
-      client.println(F("@media(max-width:520px){.grid{grid-template-columns:1fr;}.value{font-size:21px;}}"));
-      client.println(F("</style>"));
-
-      client.println(F("</head>"));
-      client.println(F("<body>"));
-
-      client.println(F("<h1>Smart Golf Swing Analyser</h1>"));
-      client.println(F("<div class='sub'>Latest swing result</div>"));
-
-      client.println(F("<div class='status'>"));
-      client.println(F("<div class='label'>Swing Type</div>"));
-      client.print(F("<div class='value'>"));
-      client.print(latestSwingType);
-      client.println(F("</div>"));
-      client.println(F("</div>"));
-
-      client.println(F("<div class='grid'>"));
-
-      client.println(F("<div class='card'><div class='label'>Swing Speed</div><div class='value'>"));
-      client.print(String(latestSwingSpeedKmh, 1));
-      client.println(F(" km/h</div></div>"));
-
-      client.println(F("<div class='card'><div class='label'>Backswing Time</div><div class='value'>"));
-      client.print(String(latestBackswingTime));
-      client.println(F(" ms</div></div>"));
-
-      client.println(F("<div class='card'><div class='label'>Total Swing Time</div><div class='value'>"));
-      client.print(String(latestTotalSwingTime));
-      client.println(F(" ms</div></div>"));
-
-      client.println(F("<div class='card'><div class='label'>Tempo</div><div class='value'>"));
-      client.print(latestTempo);
-      client.println(F("</div></div>"));
-
-      client.println(F("<div class='card'><div class='label'>Face Rotation</div><div class='value'>"));
-      client.print(latestFaceAngle);
-      client.println(F("</div></div>"));
-
-      client.println(F("<div class='card'><div class='label'>Strike Factor (1.0 is ideal)</div><div class='value'>"));
-      client.print(latestHarshness);
-      client.println(F("</div></div>"));
-
-      client.println(F("</div>"));
-
-      client.println(F("<div class='footer'>Page refreshes every 5 seconds</div>"));
-
-      client.println(F("</body>"));
-      client.println(F("</html>"));
-
-      break;
-    }
-
-    if (millis() - startTime > 1000) {
-      client.stop();
-      return;
+void connectMqtt()
+{
+  while (!mqttClient.connected())
+  {
+    if (mqttClient.connect("SwingAnalyzer")) {break;}
+    else
+    {
+      delay(2000);
+      state = ERROR_STATE;
+      setRGB(true, false, false);
+      Serial.print(".");
     }
   }
-
-  delay(1);
-  client.stop();
+}
+void sendPayload()
+{
+  String payload = "{";
+  payload += "\"speed\":"+speed+",";
+  payload += "\"tempo\":"+latestTempo+",";
+  payload += "\"faceAngle\":"+latestFaceAngle+",";
+  payload += "\"backswingTime\":"+latestBackswingTime+",";
+  payload += "\"totalSwingTime\":"+latestTotalSwingTime+",";
+  payload += "\"swingType\":"+latestSwingType;
+  payload += "}";
+  mqttClient.publish("golf/swing", payload.c_str());
 }
 
 // -------------------- Setup --------------------
@@ -280,11 +210,12 @@ void setup() {
     status = WiFi.begin(ssid,pass);
     delay(2000);
     state = ERROR_STATE;
-    
     setRGB(true, false, false);
-    
     Serial.print(".");
   }
+  mqttClient.setServer(piServer,1883);
+  connectMqtt();
+  
   Serial.println("WiFi connected, IP: ");
   Serial.println(WiFi.localIP());
   server.begin();
@@ -309,9 +240,10 @@ void setup() {
 void loop() {
   if (state == STANDBY) 
   {
+    if (!mqttClient.connected()) {connectMqtt();}
+    mqttClient.loop();
     checkWiFi();
     setRGB(true, true, false);
-    handleWebpage();
     if (buttonPressed && millis()>buttonWait) 
     {
       buttonPressed = false;
@@ -399,7 +331,7 @@ void loop() {
 
     unsigned long totalSwingTime = swingEndTime - swingStartTime;
     buttonWait = millis()+4000;
-    float kmh = (peakGyro*3.14/180)*1.33*3.6;
+    float speed = (peakGyro*3.14/180)*3.6;
 
     if (realStrike)
     {
@@ -408,7 +340,7 @@ void loop() {
       latestSwingType = "Real strike";
       if (finalAngle>0){latestFaceAngle = String(finalAngle,1)+" degrees CLOSED";}
       else {latestFaceAngle = String(abs(finalAngle),1)+" degrees OPEN";}
-      latestHarshness = String(map(piezoAnalogValue,0,1023,0,100)/kmh);
+      latestHarshness = String(map(piezoAnalogValue,0,1023,0,100)/speed);
     } 
     else 
     {
@@ -417,12 +349,13 @@ void loop() {
       latestFaceAngle = "N/A";
       latestHarshness = "No impact detected";
     }
-    latestSwingSpeedKmh = kmh;
+    latestSwingSpeed = speed;
     latestBackswingTime = backswingTime;
     latestTotalSwingTime = totalSwingTime;
 
     setRGB(true, true, true);
     delay(500);
+    sendPayload();
 
     state = STANDBY;
     setRGB(true, true, false);
