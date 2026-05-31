@@ -148,7 +148,6 @@ void reconnectWiFi()
     
     Serial.print(".");
   }
-  server.begin();
   setRGB(true,true,false);
   state = STANDBY;
 }
@@ -156,7 +155,7 @@ void connectMqtt()
 {
   while (!mqttClient.connected())
   {
-    if (mqttClient.connect("SwingAnalyzer")) {break;}
+    if (mqttClient.connect("SwingAnalyzer")) {state = STANDBY; break;}
     else
     {
       delay(2000);
@@ -169,7 +168,7 @@ void connectMqtt()
 void sendPayload()
 {
   String payload = "{";
-  payload += "\"speed\":"+speed+",";
+  payload += "\"speed\":"+latestSwingSpeed+",";
   payload += "\"tempo\":"+latestTempo+",";
   payload += "\"faceAngle\":"+latestFaceAngle+",";
   payload += "\"backswingTime\":"+latestBackswingTime+",";
@@ -218,7 +217,6 @@ void setup() {
   
   Serial.println("WiFi connected, IP: ");
   Serial.println(WiFi.localIP());
-  server.begin();
 
   Serial.print("Accelerometer sample rate = ");
   Serial.print(IMU.accelerationSampleRate());
@@ -240,9 +238,9 @@ void setup() {
 void loop() {
   if (state == STANDBY) 
   {
+    checkWiFi();
     if (!mqttClient.connected()) {connectMqtt();}
     mqttClient.loop();
-    checkWiFi();
     setRGB(true, true, false);
     if (buttonPressed && millis()>buttonWait) 
     {
