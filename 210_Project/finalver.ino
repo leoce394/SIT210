@@ -58,7 +58,6 @@ unsigned long swingEndTime = 0;
 bool realStrike = false;
 
 float peakGyro = 0.0;
-float peakAccel = 0.0;
 
 const int pizeoThreshold = 200;
 int piezoAnalogValue = 0;
@@ -110,7 +109,6 @@ void resetSwingData() {
   realStrike = false;
 
   peakGyro = 0.0;
-  peakAccel = 0.0;
 
   piezoAnalogValue = 0;
 
@@ -168,12 +166,13 @@ void connectMqtt()
 void sendPayload()
 {
   String payload = "{";
-  payload += "\"speed\":"+latestSwingSpeed+",";
-  payload += "\"tempo\":"+latestTempo+",";
-  payload += "\"faceAngle\":"+latestFaceAngle+",";
-  payload += "\"backswingTime\":"+latestBackswingTime+",";
-  payload += "\"totalSwingTime\":"+latestTotalSwingTime+",";
-  payload += "\"swingType\":"+latestSwingType;
+  payload += "\"speed\":"+String(latestSwingSpeed,1)+",";
+  payload += "\"tempo\":\""+latestTempo+"\",";
+  payload += "\"faceAngle\":\""+latestFaceAngle+"\",";
+  payload += "\"backswingTime\":"+String(latestBackswingTime)+",";
+  payload += "\"totalSwingTime\":"+String(latestTotalSwingTime)+",";
+  payload += "\"strikeFactor\":\""+latestHarshness+"\",";
+  payload += "\"swingType\":\""+latestSwingType+"\"";
   payload += "}";
   mqttClient.publish("golf/swing", payload.c_str());
 }
@@ -217,10 +216,6 @@ void setup() {
   
   Serial.println("WiFi connected, IP: ");
   Serial.println(WiFi.localIP());
-
-  Serial.print("Accelerometer sample rate = ");
-  Serial.print(IMU.accelerationSampleRate());
-  Serial.println(" Hz");
 
   Serial.print("Gyroscope sample rate = ");
   Serial.print(IMU.gyroscopeSampleRate());
