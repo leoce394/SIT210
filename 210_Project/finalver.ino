@@ -27,7 +27,6 @@ volatile unsigned long impactTimeMicros = 0;
 // State machine
 enum SystemState {
   SETUP_STATE,
-  WIFI_SETUP,
   STANDBY,
   ARMED,
   BACKSWING,
